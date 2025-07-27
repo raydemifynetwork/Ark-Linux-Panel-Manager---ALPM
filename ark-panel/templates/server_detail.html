@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ server.name }} - ARK Server Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #1a1a1a; color: #fff; }
+        .navbar { background: linear-gradient(90deg, #8B0000, #B22222); }
+        .card { background-color: #2d2d2d; border: 1px solid #444; }
+        .card-header { background-color: #3a3a3a; border-bottom: 1px solid #444; }
+        .metric-card { background-color: #333; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dragon"></i> ARK Server Panel
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">← Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>
+                                <i class="fas fa-server"></i> {{ server.name }}
+                            </h3>
+                            <span class="badge {% if server.status == 'online' %}bg-success{% elif server.status == 'offline' %}bg-danger{% elif server.status == 'not_installed' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {% if server.status == 'online' %}Online
+                                {% elif server.status == 'offline' %}Offline
+                                {% elif server.status == 'not_installed' %}Não Instalado
+                                {% else %}Erro{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if server.status == 'not_installed' %}
+                            <div class="text-center p-5">
+                                <h3><i class="fas fa-exclamation-circle text-warning"></i> Servidor Não Instalado</h3>
+                                <p class="lead">Este servidor ainda não foi instalado no sistema.</p>
+                                <button class="btn btn-primary btn-lg" onclick="installServer({{ server.id }})">
+                                    <i class="fas fa-download"></i> Instalar Servidor ARK - {{ server.map }}
+                                </button>
+                                <p class="mt-3 text-muted">
+                                    <small>A instalação pode levar alguns minutos. O servidor (~15GB) será baixado.</small>
+                                </p>
+                            </div>
+                        {% else %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-info-circle"></i> Informações do Servidor</h5>
+                                    <table class="table table-dark table-striped">
+                                        <tr>
+                                            <td><strong>Mapa:</strong></td>
+                                            <td>{{ server.map }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>IP:</strong></td>
+                                            <td>{{ server.ip }}:{{ server.game_port }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Query Port:</strong></td>
+                                            <td>{{ server.query_port }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>RCON Port:</strong></td>
+                                            <td>{{ server.rcon_port }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Caminho:</strong></td>
+                                            <td>{{ server.path }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Última Verificação:</strong></td>
+                                            <td>{{ server.last_check }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-chart-bar"></i> Métricas em Tempo Real</h5>
+                                    {% if server.status == 'online' %}
+                                        <div class="metric-card">
+                                            <h6><i class="fas fa-users"></i> Jogadores Online</h6>
+                                            <h3 class="text-center">{{ server.players }} / {{ server.max_players }}</h3>
+                                        </div>
+                                        <div class="metric-card">
+                                            <h6><i class="fas fa-microchip"></i> Uso de CPU</h6>
+                                            <h3 class="text-center">{{ server.cpu_percent }}%</h3>
+                                        </div>
+                                        <div class="metric-card">
+                                            <h6><i class="fas fa-memory"></i> Uso de Memória</h6>
+                                            <h3 class="text-center">{{ server.memory_mb|round(0) }} MB</h3>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center p-4">
+                                            <p class="text-muted">
+                                                <i class="fas fa-info-circle"></i> Métricas disponíveis quando o servidor estiver online
+                                            </p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5><i class="fas fa-cogs"></i> Ações do Servidor</h5>
+                                    <div class="d-grid gap-2 d-md-flex justify-content-center">
+                                        <a href="/server/{{ server.id }}/config" class="btn btn-primary btn-lg mx-2">
+                                            <i class="fas fa-cog"></i> Configurações
+                                        </a>
+                                        {% if server.status == 'online' %}
+                                            <button class="btn btn-danger btn-lg mx-2" onclick="stopServer({{ server.id }})">
+                                                <i class="fas fa-stop"></i> Parar Servidor
+                                            </button>
+                                            <button class="btn btn-warning btn-lg mx-2" onclick="restartServer({{ server.id }})">
+                                                <i class="fas fa-sync-alt"></i> Reiniciar Servidor
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-success btn-lg mx-2" onclick="startServer({{ server.id }})">
+                                                <i class="fas fa-play"></i> Iniciar Servidor
+                                            </button>
+                                        {% endif %}
+                                        <button class="btn btn-info btn-lg mx-2" onclick="backupServer({{ server.id }})">
+                                            <i class="fas fa-download"></i> Backup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function installServer(serverId) {
+            if (confirm('Tem certeza que deseja instalar o servidor ARK - ' + serverId + '?\n\nA instalação pode levar alguns minutos e requer ~15GB de espaço em disco.')) {
+                fetch(`/api/server/${serverId}/install`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Servidor instalado com sucesso! Aguarde alguns segundos e recarregue a página.');
+                        location.reload();
+                    } else {
+                        alert('Erro na instalação: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro na instalação: ' + error);
+                });
+            }
+        }
+
+        function startServer(serverId) {
+            fetch(`/api/server/${serverId}/start`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao iniciar servidor: ' + error);
+            });
+        }
+
+        function stopServer(serverId) {
+            if (confirm('Tem certeza que deseja parar este servidor?')) {
+                fetch(`/api/server/${serverId}/stop`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                })
+                .catch(error => {
+                    alert('Erro ao parar servidor: ' + error);
+                });
+            }
+        }
+
+        function restartServer(serverId) {
+            if (confirm('Tem certeza que deseja reiniciar este servidor?')) {
+                stopServer(serverId);
+                setTimeout(() => startServer(serverId), 3000);
+            }
+        }
+
+        function backupServer(serverId) {
+            alert('Função de backup será implementada em breve!');
+        }
+
+        // Auto-refresh a cada 15 segundos
+        setTimeout(function(){
+            location.reload();
+        }, 15000);
+    </script>
+</body>
+</html>
