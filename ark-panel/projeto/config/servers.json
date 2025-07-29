@@ -1,0 +1,121 @@
+{
+  "servers": [
+    {
+      "id": 1,
+      "name": "ARK - The Island",
+      "map": "TheIsland",
+      "ip": "127.0.0.1",
+      "game_port": 7777,
+      "query_port": 27015,
+      "rcon_port": 32330,
+      "path": "/home/arkserver/ark-servers/the-island",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 2,
+      "name": "ARK - The Center",
+      "map": "TheCenter",
+      "ip": "127.0.0.1",
+      "game_port": 7787,
+      "query_port": 27025,
+      "rcon_port": 32340,
+      "path": "/home/arkserver/ark-servers/the-center",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 3,
+      "name": "ARK - Ragnarok",
+      "map": "Ragnarok",
+      "ip": "127.0.0.1",
+      "game_port": 7797,
+      "query_port": 27035,
+      "rcon_port": 32350,
+      "path": "/home/arkserver/ark-servers/ragnarok",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 4,
+      "name": "ARK - Aberration",
+      "map": "Aberration",
+      "ip": "127.0.0.1",
+      "game_port": 7807,
+      "query_port": 27045,
+      "rcon_port": 32360,
+      "path": "/home/arkserver/ark-servers/aberration",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 5,
+      "name": "ARK - Extinction",
+      "map": "Extinction",
+      "ip": "127.0.0.1",
+      "game_port": 7817,
+      "query_port": 27055,
+      "rcon_port": 32370,
+      "path": "/home/arkserver/ark-servers/extinction",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 6,
+      "name": "ARK - Genesis",
+      "map": "Genesis",
+      "ip": "127.0.0.1",
+      "game_port": 7827,
+      "query_port": 27065,
+      "rcon_port": 32380,
+      "path": "/home/arkserver/ark-servers/genesis",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 7,
+      "name": "ARK - Genesis 2",
+      "map": "Genesis2",
+      "ip": "127.0.0.1",
+      "game_port": 7837,
+      "query_port": 27075,
+      "rcon_port": 32390,
+      "path": "/home/arkserver/ark-servers/genesis2",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 8,
+      "name": "ARK - Lost Island",
+      "map": "LostIsland",
+      "ip": "127.0.0.1",
+      "game_port": 7847,
+      "query_port": 27085,
+      "rcon_port": 32400,
+      "path": "/home/arkserver/ark-servers/lost-island",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    },
+    {
+      "id": 9,
+      "name": "ARK - Fjordur",
+      "map": "Fjordur",
+      "ip": "127.0.0.1",
+      "game_port": 7857,
+      "query_port": 27095,
+      "rcon_port": 32410,
+      "path": "/home/arkserver/ark-servers/fjordur",
+      "enabled": true,
+      "status": "offline",
+      "players": 0
+    }
+  ]
+}

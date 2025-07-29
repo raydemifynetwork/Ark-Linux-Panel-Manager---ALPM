@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ server.name }} - ARK Server Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #1a1a1a; color: #fff; }
+        .navbar { background: linear-gradient(90deg, #8B0000, #B22222); }
+        .card { background-color: #2d2d2d; border: 1px solid #444; }
+        .card-header { background-color: #3a3a3a; border-bottom: 1px solid #444; }
+        .metric-card { background-color: #333; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+        .log-container {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .log-timestamp { color: #569cd6; }
+        .log-error { color: #f48771; font-weight: bold; }
+        .log-warning { color: #dcdcaa; }
+        .log-info { color: #9cdcfe; }
+        .installing { opacity: 0.7; }
+        .btn-refresh { position: absolute; top: 10px; right: 15px; }
+        .modal-lg { max-width: 80%; }
+        .log-filters {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .log-file-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .log-file-item {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .log-file-item:hover {
+            background-color: #444;
+        }
+        .log-file-item.active {
+            background-color: #0d6efd;
+        }
+        .branch-info {
+            background-color: #333;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dragon"></i> ARK Server Panel
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">← Dashboard</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>
+                                <i class="fas fa-server"></i> {{ server.name }}
+                            </h3>
+                            <span class="badge {% if server.status == 'online' %}bg-success{% elif server.status == 'offline' %}bg-danger{% elif server.status == 'not_installed' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {% if server.status == 'online' %}Online
+                                {% elif server.status == 'offline' %}Offline
+                                {% elif server.status == 'not_installed' %}Não Instalado
+                                {% else %}Erro{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if server.status == 'not_installed' %}
+                            <div class="text-center p-5">
+                                <h3><i class="fas fa-exclamation-circle text-warning"></i> Servidor Não Instalado</h3>
+                                <p class="lead">Este servidor ainda não foi instalado no sistema.</p>
+                                
+                                <div class="branch-info">
+                                    <h5><i class="fas fa-code-branch"></i> Configurações de Instalação</h5>
+                                    <div class="mb-3">
+                                        <label for="install-branch" class="form-label">Versão (Branch) do Servidor:</label>
+                                        <select class="form-control" id="install-branch">
+                                            <option value="preaquatica" selected>preaquatica (Recomendado - Corrige bug da atualização aquática)</option>
+                                            <option value="public">public (Versão estável mais recente)</option>
+                                            <option value="staging">staging (Versão de testes)</option>
+                                        </select>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle"></i> 
+                                            Devido a um bug conhecido na atualização aquática, recomendamos usar "preaquatica" para instalar os binários Linux corretos.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-primary btn-lg" onclick="installServer({{ server.id }})" id="install-btn">
+                                    <i class="fas fa-download"></i> Instalar Servidor ARK - {{ server.map }}
+                                </button>
+                                <p class="mt-3 text-muted">
+                                    <small>A instalação pode levar alguns minutos. O servidor (~15GB) será baixado.</small>
+                                </p>
+                            </div>
+                        {% else %}
+                            <ul class="nav nav-tabs" id="serverTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Informações</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="metrics-tab" data-bs-toggle="tab" data-bs-target="#metrics" type="button" role="tab">Métricas</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab" onclick="loadLogsTab({{ server.id }})">Logs</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">Manutenção</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="serverTabContent">
+                                <!-- Aba de Informações -->
+                                <div class="tab-pane fade show active" id="info" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-info-circle"></i> Informações do Servidor</h5>
+                                            <table class="table table-dark table-striped">
+                                                <tr>
+                                                    <td><strong>Mapa:</strong></td>
+                                                    <td>{{ server.map }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>IP:</strong></td>
+                                                    <td>{{ server.ip }}:{{ server.game_port }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Query Port:</strong></td>
+                                                    <td>{{ server.query_port }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>RCON Port:</strong></td>
+                                                    <td>{{ server.rcon_port }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Caminho:</strong></td>
+                                                    <td>{{ server.path }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Versão:</strong></td>
+                                                    <td>{{ server.version }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Instalado em:</strong></td>
+                                                    <td>{{ server.install_date }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Última Verificação:</strong></td>
+                                                    <td>{{ server.last_check }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-cogs"></i> Ações do Servidor</h5>
+                                            <div class="d-grid gap-2">
+                                                <a href="/server/{{ server.id }}/config" class="btn btn-primary">
+                                                    <i class="fas fa-cog"></i> Configurações
+                                                </a>
+                                                {% if server.status == 'online' %}
+                                                    <button class="btn btn-danger" onclick="stopServer({{ server.id }})">
+                                                        <i class="fas fa-stop"></i> Parar Servidor
+                                                    </button>
+                                                    <button class="btn btn-warning" onclick="restartServer({{ server.id }})">
+                                                        <i class="fas fa-sync-alt"></i> Reiniciar Servidor
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-success" onclick="startServer({{ server.id }})">
+                                                        <i class="fas fa-play"></i> Iniciar Servidor
+                                                    </button>
+                                                {% endif %}
+                                                <button class="btn btn-info" onclick="backupServer({{ server.id }})">
+                                                    <i class="fas fa-download"></i> Backup
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Aba de Métricas -->
+                                <div class="tab-pane fade" id="metrics" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-chart-bar"></i> Métricas em Tempo Real</h5>
+                                            {% if server.status == 'online' %}
+                                                <div class="metric-card">
+                                                    <h6><i class="fas fa-users"></i> Jogadores Online</h6>
+                                                    <h3 class="text-center">{{ server.players }} / {{ server.max_players }}</h3>
+                                                </div>
+                                                <div class="metric-card">
+                                                    <h6><i class="fas fa-microchip"></i> Uso de CPU</h6>
+                                                    <h3 class="text-center">{{ server.cpu_percent }}%</h3>
+                                                </div>
+                                                <div class="metric-card">
+                                                    <h6><i class="fas fa-memory"></i> Uso de Memória</h6>
+                                                    <h3 class="text-center">{{ server.memory_mb|round(0) }} MB</h3>
+                                                </div>
+                                            {% else %}
+                                                <div class="text-center p-4">
+                                                    <p class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> Métricas disponíveis quando o servidor estiver online
+                                                    </p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-history"></i> Histórico</h5>
+                                            <div class="metric-card">
+                                                <p><i class="fas fa-circle {% if server.status == 'online' %}text-success{% elif server.status == 'offline' %}text-danger{% else %}text-secondary{% endif %}"></i> Status Atual: {{ server.status|title }}</p>
+                                                <p><i class="fas fa-clock"></i> Última Verificação: {{ server.last_check }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Aba de Logs Aprimorada -->
+                                <div class="tab-pane fade" id="logs" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-3">
+                                            <h5><i class="fas fa-file-alt"></i> Arquivos de Log</h5>
+                                            <div class="log-file-selector" id="log-file-selector">
+                                                {% if log_files %}
+                                                    {% for log_file in log_files %}
+                                                        <div class="log-file-item" onclick="loadSpecificLog({{ server.id }}, '{{ log_file.file }}')" data-file="{{ log_file.file }}">
+                                                            <i class="fas fa-file"></i> {{ log_file.name }}
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <p class="text-muted">Nenhum arquivo de log disponível</p>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <h5 class="mt-3"><i class="fas fa-filter"></i> Filtros</h5>
+                                            <div class="log-filters">
+                                                <div class="mb-2">
+                                                    <label for="search-term" class="form-label">Buscar:</label>
+                                                    <input type="text" class="form-control form-control-sm" id="search-term" placeholder="Termo de busca...">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label for="start-date" class="form-label">Data Inicial:</label>
+                                                    <input type="date" class="form-control form-control-sm" id="start-date">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label for="end-date" class="form-label">Data Final:</label>
+                                                    <input type="date" class="form-control form-control-sm" id="end-date">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label for="lines-limit" class="form-label">Linhas:</label>
+                                                    <select class="form-control form-control-sm" id="lines-limit">
+                                                        <option value="100">100</option>
+                                                        <option value="500" selected>500</option>
+                                                        <option value="1000">1000</option>
+                                                        <option value="2000">2000</option>
+                                                    </select>
+                                                </div>
+                                                <button class="btn btn-primary btn-sm w-100" onclick="applyFilters({{ server.id }})">
+                                                    <i class="fas fa-filter"></i> Aplicar Filtros
+                                                </button>
+                                            </div>
+                                            
+                                            <button class="btn btn-success btn-sm w-100 mt-2" onclick="downloadCurrentLog()">
+                                                <i class="fas fa-download"></i> Download Log
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="col-md-9">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h5><i class="fas fa-stream"></i> Visualizador de Logs</h5>
+                                                <div>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="refreshCurrentLog()">
+                                                        <i class="fas fa-sync"></i> Atualizar
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-info" onclick="toggleAutoRefresh()">
+                                                        <i class="fas fa-play"></i> Auto Refresh
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <small id="current-log-info" class="text-muted">
+                                                    Selecione um arquivo de log ou use os filtros
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="log-container" id="log-content">
+                                                <p class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> Selecione um arquivo de log no painel esquerdo ou use os filtros para visualizar o conteúdo.
+                                                </p>
+                                            </div>
+                                            
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-lightbulb"></i> Dica: Use os filtros para encontrar erros específicos ou visualizar logs de períodos específicos.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Aba de Manutenção -->
+                                <div class="tab-pane fade" id="maintenance" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-tools"></i> Manutenção do Servidor</h5>
+                                            
+                                            <div class="branch-info">
+                                                <h6><i class="fas fa-code-branch"></i> Configurações de Atualização</h6>
+                                                <div class="mb-3">
+                                                    <label for="update-branch" class="form-label">Versão (Branch) para Atualização:</label>
+                                                    <select class="form-control" id="update-branch">
+                                                        <option value="preaquatica" selected>preaquatica (Recomendado - Corrige bug da atualização aquática)</option>
+                                                        <option value="public">public (Versão estável mais recente)</option>
+                                                        <option value="staging">staging (Versão de testes)</option>
+                                                    </select>
+                                                    <div class="form-text">
+                                                        <i class="fas fa-info-circle"></i> 
+                                                        Devido a um bug conhecido, recomendamos usar "preaquatica" para manter os binários Linux corretos.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> <strong>Atenção!</strong> 
+                                                As operações abaixo podem afetar o servidor em execução.
+                                            </div>
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-info" onclick="showInstallLogs({{ server.id }})">
+                                                    <i class="fas fa-file-alt"></i> Ver Logs de Instalação
+                                                </button>
+                                                <button class="btn btn-warning" onclick="showUpdateLogs({{ server.id }})">
+                                                    <i class="fas fa-file-alt"></i> Ver Logs de Atualização
+                                                </button>
+                                                <button class="btn btn-primary" onclick="updateServer({{ server.id }})">
+                                                    <i class="fas fa-sync"></i> Verificar/Atualizar Servidor
+                                                </button>
+                                                <button class="btn btn-danger" onclick="forceInstallServer({{ server.id }})">
+                                                    <i class="fas fa-redo"></i> Forçar Reinstalação
+                                                </button>
+                                                <button class="btn btn-dark" onclick="uninstallServer({{ server.id }})">
+                                                    <i class="fas fa-trash"></i> Desinstalar Servidor
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5><i class="fas fa-question-circle"></i> Ajuda</h5>
+                                            <div class="card bg-dark">
+                                                <div class="card-body">
+                                                    <p><strong>Verificar/Atualizar:</strong> Verifica se há atualizações disponíveis e as aplica.</p>
+                                                    <p><strong>Forçar Reinstalação:</strong> Remove completamente o servidor e reinstala do zero.</p>
+                                                    <p><strong>Desinstalar:</strong> Remove completamente todos os arquivos do servidor.</p>
+                                                    <p><strong>Branch "preaquatica":</strong> Versão que contém os binários Linux corretos, contornando o bug da atualização aquática.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para visualização de logs -->
+    <div class="modal fade" id="logsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logsModalTitle">Logs</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="log-container" id="modal-log-content" style="height: 400px;">
+                        <p class="text-muted">Carregando logs...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" onclick="refreshModalLogs()">Atualizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentLogType = '';
+        let currentServerId = 0;
+        let currentLogFile = '';
+        let autoRefreshInterval = null;
+        let autoRefreshEnabled = false;
+        
+        function installServer(serverId) {
+            const btn = document.getElementById('install-btn');
+            const originalText = btn.innerHTML;
+            const branch = document.getElementById('install-branch').value;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Instalando... (pode levar 10-30 minutos)';
+            btn.disabled = true;
+            
+            // Enviar branch selecionado no corpo da requisição
+            fetch(`/api/server/${serverId}/install`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    branch: branch
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Servidor instalado com sucesso! Aguarde alguns segundos e recarregue a página.');
+                    location.reload();
+                } else {
+                    alert('Erro na instalação: ' + data.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                alert('Erro na instalação: ' + error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+        
+        function forceInstallServer(serverId) {
+            const branch = document.getElementById('update-branch').value;
+            
+            if (confirm('⚠️ ATENÇÃO! Esta operação irá REMOVER completamente o servidor atual e reinstalá-lo do zero.\n\nTem certeza que deseja continuar?')) {
+                fetch(`/api/server/${serverId}/force_install`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        branch: branch
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Servidor reinstalado com sucesso! Aguarde alguns segundos e recarregue a página.');
+                        location.reload();
+                    } else {
+                        alert('Erro na reinstalação: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro na reinstalação: ' + error);
+                });
+            }
+        }
+        
+        function updateServer(serverId) {
+            const branch = document.getElementById('update-branch').value;
+            
+            if (confirm('Verificar e aplicar atualizações para este servidor (branch: ' + branch + ')?')) {
+                fetch(`/api/server/${serverId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        branch: branch
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Servidor atualizado com sucesso!');
+                        location.reload();
+                    } else {
+                        alert('Erro na atualização: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro na atualização: ' + error);
+                });
+            }
+        }
+        
+        function uninstallServer(serverId) {
+            if (confirm('⚠️ ATENÇÃO! Esta operação irá REMOVER completamente todos os arquivos deste servidor.\n\nTem certeza que deseja continuar?')) {
+                fetch(`/api/server/${serverId}/uninstall`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Servidor desinstalado com sucesso!');
+                        window.location.href = '/';
+                    } else {
+                        alert('Erro na desinstalação: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro na desinstalação: ' + error);
+                });
+            }
+        }
+        
+        function startServer(serverId) {
+            fetch(`/api/server/${serverId}/start`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao iniciar servidor: ' + error);
+            });
+        }
+        
+        function stopServer(serverId) {
+            if (confirm('Tem certeza que deseja parar este servidor?')) {
+                fetch(`/api/server/${serverId}/stop`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                })
+                .catch(error => {
+                    alert('Erro ao parar servidor: ' + error);
+                });
+            }
+        }
+        
+        function restartServer(serverId) {
+            if (confirm('Tem certeza que deseja reiniciar este servidor?')) {
+                stopServer(serverId);
+                setTimeout(() => startServer(serverId), 3000);
+            }
+        }
+        
+        function backupServer(serverId) {
+            alert('Função de backup será implementada em breve!');
+        }
+        
+        // Funções para a aba de logs aprimorada
+        function loadLogsTab(serverId) {
+            currentServerId = serverId;
+            // Carregar o primeiro arquivo de log disponível
+            const firstLogFileItem = document.querySelector('.log-file-item');
+            if (firstLogFileItem) {
+                const filename = firstLogFileItem.getAttribute('data-file');
+                loadSpecificLog(serverId, filename);
+                firstLogFileItem.classList.add('active');
+            }
+        }
+        
+        function loadSpecificLog(serverId, filename) {
+            currentLogFile = filename;
+            
+            // Atualizar UI para mostrar arquivo selecionado
+            document.querySelectorAll('.log-file-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const logContainer = document.getElementById('log-content');
+            logContainer.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Carregando logs...</p>';
+            
+            // Atualizar informação do log atual
+            document.getElementById('current-log-info').innerHTML = 
+                `<i class="fas fa-file"></i> Visualizando: ${filename}`;
+            
+            fetch(`/api/server/${serverId}/specific_log?file=${encodeURIComponent(filename)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    displayLogContent(data.logs);
+                } else {
+                    logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar logs: ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar logs: ${error}</p>`;
+            });
+        }
+        
+        function applyFilters(serverId) {
+            const searchTerm = document.getElementById('search-term').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const linesLimit = document.getElementById('lines-limit').value;
+            
+            const logContainer = document.getElementById('log-content');
+            logContainer.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Aplicando filtros...</p>';
+            
+            // Construir query string
+            let queryParams = `lines=${linesLimit}`;
+            if (searchTerm) queryParams += `&search=${encodeURIComponent(searchTerm)}`;
+            if (startDate) queryParams += `&start_date=${startDate}`;
+            if (endDate) queryParams += `&end_date=${endDate}`;
+            
+            fetch(`/api/server/${serverId}/logs?${queryParams}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    displayLogContent(data.logs);
+                    document.getElementById('current-log-info').innerHTML = 
+                        `<i class="fas fa-filter"></i> Filtros aplicados - ${linesLimit} linhas`;
+                } else {
+                    logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao aplicar filtros: ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao aplicar filtros: ${error}</p>`;
+            });
+        }
+        
+        function displayLogContent(logContent) {
+            const logContainer = document.getElementById('log-content');
+            if (logContent && logContent.trim() !== '') {
+                // Formatação básica dos logs
+                let formattedLogs = logContent
+                    .replace(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/g, '[<span class="log-timestamp">$1</span>]')
+                    .replace(/\b(ERROR|FATAL)\b/g, '<span class="log-error">$1</span>')
+                    .replace(/\b(WARNING|WARN)\b/g, '<span class="log-warning">$1</span>')
+                    .replace(/\b(INFO)\b/g, '<span class="log-info">$1</span>')
+                    .replace(/\n/g, '<br>');
+                
+                logContainer.innerHTML = formattedLogs;
+            } else {
+                logContainer.innerHTML = '<p class="text-muted">Nenhum conteúdo de log encontrado.</p>';
+            }
+            
+            // Rolar para o final
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function refreshCurrentLog() {
+            if (currentLogFile) {
+                loadSpecificLog(currentServerId, currentLogFile);
+            } else {
+                // Se não houver arquivo específico, recarregar com filtros atuais
+                applyFilters(currentServerId);
+            }
+        }
+        
+        function toggleAutoRefresh() {
+            const btn = event.target.closest('button');
+            
+            if (autoRefreshEnabled) {
+                // Desativar auto refresh
+                clearInterval(autoRefreshInterval);
+                autoRefreshEnabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Auto Refresh';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-info');
+            } else {
+                // Ativar auto refresh (a cada 10 segundos)
+                autoRefreshInterval = setInterval(() => {
+                    refreshCurrentLog();
+                }, 10000);
+                autoRefreshEnabled = true;
+                btn.innerHTML = '<i class="fas fa-pause"></i> Parar Refresh';
+                btn.classList.remove('btn-outline-info');
+                btn.classList.add('btn-success');
+            }
+        }
+        
+        function downloadCurrentLog() {
+            if (!currentLogFile) {
+                alert('Selecione um arquivo de log primeiro!');
+                return;
+            }
+            
+            // Criar URL para download
+            const downloadUrl = `/api/server/${currentServerId}/specific_log?file=${encodeURIComponent(currentLogFile)}`;
+            
+            // Fazer requisição para obter o conteúdo
+            fetch(downloadUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Criar blob e link para download
+                    const blob = new Blob([data.logs], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = currentLogFile;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('Erro ao baixar log: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao baixar log: ' + error);
+            });
+        }
+        
+        function showInstallLogs(serverId) {
+            currentLogType = 'install';
+            currentServerId = serverId;
+            document.getElementById('logsModalTitle').innerHTML = '<i class="fas fa-download"></i> Logs de Instalação';
+            const modal = new bootstrap.Modal(document.getElementById('logsModal'));
+            modal.show();
+            loadModalLogs(serverId, 'install');
+        }
+        
+        function showUpdateLogs(serverId) {
+            currentLogType = 'update';
+            currentServerId = serverId;
+            document.getElementById('logsModalTitle').innerHTML = '<i class="fas fa-sync"></i> Logs de Atualização';
+            const modal = new bootstrap.Modal(document.getElementById('logsModal'));
+            modal.show();
+            loadModalLogs(serverId, 'update');
+        }
+        
+        function loadModalLogs(serverId, logType) {
+            const logContainer = document.getElementById('modal-log-content');
+            logContainer.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Carregando logs...</p>';
+            
+            let endpoint = `/api/server/${serverId}/`;
+            if (logType === 'install') {
+                endpoint += 'install_logs';
+            } else if (logType === 'update') {
+                endpoint += 'update_logs';
+            }
+            
+            fetch(endpoint)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.logs && data.logs.trim() !== '') {
+                        // Formatação básica dos logs
+                        let formattedLogs = data.logs
+                            .replace(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/g, '[<span class="log-timestamp">$1</span>]')
+                            .replace(/\b(ERROR|FATAL)\b/g, '<span class="log-error">$1</span>')
+                            .replace(/\b(WARNING|WARN)\b/g, '<span class="log-warning">$1</span>')
+                            .replace(/\b(INFO)\b/g, '<span class="log-info">$1</span>')
+                            .replace(/\n/g, '<br>');
+                        
+                        logContainer.innerHTML = formattedLogs;
+                    } else {
+                        logContainer.innerHTML = '<p class="text-muted">Nenhum log disponível.</p>';
+                    }
+                } else {
+                    logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar logs: ${data.message}</p>`;
+                }
+                
+                // Rolar para o final
+                logContainer.scrollTop = logContainer.scrollHeight;
+            })
+            .catch(error => {
+                logContainer.innerHTML = `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar logs: ${error}</p>`;
+            });
+        }
+        
+        function refreshModalLogs() {
+            if (currentServerId && currentLogType) {
+                loadModalLogs(currentServerId, currentLogType);
+            }
+        }
+        
+        // Auto-refresh das métricas a cada 30 segundos (apenas se estiver na aba de métricas)
+        setInterval(function() {
+            if (document.getElementById('metrics-tab') && document.getElementById('metrics-tab').classList.contains('active')) {
+                location.reload();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

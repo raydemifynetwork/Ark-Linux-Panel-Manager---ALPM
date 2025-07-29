@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK Server Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #1a1a1a; color: #fff; }
+        .navbar { background: linear-gradient(90deg, #8B0000, #B22222); }
+        .card { background-color: #2d2d2d; border: 1px solid #444; }
+        .card-header { background-color: #3a3a3a; border-bottom: 1px solid #444; }
+        .stat-card { border-radius: 10px; margin-bottom: 20px; }
+        .map-icon { font-size: 2rem; margin-bottom: 10px; }
+        .server-online { border-left: 4px solid #28a745; }
+        .server-offline { border-left: 4px solid #dc3545; }
+        .server-not-installed { border-left: 4px solid #6c757d; }
+        .server-error { border-left: 4px solid #ffc107; }
+        .installing { opacity: 0.7; }
+        .server-info-small { font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dragon"></i> ARK Server Panel
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-server"></i> Todos os Mapas ARK Pré-Configurados
+                </span>
+            </div>
+        </div>
+    </nav>
+    <div class="container-fluid mt-4">
+        <!-- Estatísticas -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="stat-card bg-primary text-white p-3 text-center">
+                    <h3>{{ stats.total_servers }}</h3>
+                    <p class="mb-0">Total de Servidores</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card bg-info text-white p-3 text-center">
+                    <h3>{{ stats.installed_servers }}</h3>
+                    <p class="mb-0">Instalados</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card bg-success text-white p-3 text-center">
+                    <h3>{{ stats.online_servers }}</h3>
+                    <p class="mb-0">Online</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card bg-danger text-white p-3 text-center">
+                    <h3>{{ stats.offline_servers }}</h3>
+                    <p class="mb-0">Offline</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card bg-warning text-dark p-3 text-center">
+                    <h3>{{ stats.total_players }}</h3>
+                    <p class="mb-0">Jogadores</p>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card bg-secondary text-white p-3 text-center">
+                    <h3>{{ stats.total_servers - stats.installed_servers }}</h3>
+                    <p class="mb-0">Não Instalados</p>
+                </div>
+            </div>
+        </div>
+        <!-- Lista de Servidores -->
+        <div class="row">
+            {% for server in servers %}
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                <div class="card h-100 {% if server.status == 'online' %}server-online{% elif server.status == 'offline' %}server-offline{% elif server.status == 'not_installed' %}server-not-installed{% else %}server-error{% endif %}" id="server-card-{{ server.id }}">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-server"></i> {{ server.name }}
+                            </h5>
+                            <span class="badge {% if server.status == 'online' %}bg-success{% elif server.status == 'offline' %}bg-danger{% elif server.status == 'not_installed' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {% if server.status == 'online' %}Online
+                                {% elif server.status == 'offline' %}Offline
+                                {% elif server.status == 'not_installed' %}Não Instalado
+                                {% else %}Erro{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="map-icon">
+                                {% if server.map == 'TheIsland' %}
+                                    <i class="fas fa-island-tropical text-success"></i>
+                                {% elif server.map == 'TheCenter' %}
+                                    <i class="fas fa-circle text-warning"></i>
+                                {% elif server.map == 'Ragnarok' %}
+                                    <i class="fas fa-snowflake text-info"></i>
+                                {% elif server.map == 'Aberration' %}
+                                    <i class="fas fa-virus text-danger"></i>
+                                {% elif server.map == 'Extinction' %}
+                                    <i class="fas fa-skull text-dark"></i>
+                                {% elif server.map == 'Genesis' %}
+                                    <i class="fas fa-globe-americas text-primary"></i>
+                                {% elif server.map == 'Genesis2' %}
+                                    <i class="fas fa-globe-europe text-success"></i>
+                                {% elif server.map == 'LostIsland' %}
+                                    <i class="fas fa-tree text-warning"></i>
+                                {% elif server.map == 'Fjordur' %}
+                                    <i class="fas fa-water text-info"></i>
+                                {% endif %}
+                            </div>
+                            <h6>{{ server.map }}</h6>
+                        </div>
+                        {% if server.status == 'not_installed' %}
+                            <div class="text-center">
+                                <p class="text-muted">
+                                    <i class="fas fa-exclamation-circle"></i> Servidor não instalado
+                                </p>
+                                <button class="btn btn-primary btn-sm" onclick="installServer({{ server.id }})">
+                                    <i class="fas fa-download"></i> Instalar Servidor
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="server-info">
+                                <p class="mb-1">
+                                    <i class="fas fa-network-wired"></i> 
+                                    <strong>IP:</strong> {{ request.host.split(':')[0] }}:{{ server.game_port }}
+                                </p>
+                                {% if server.status == 'online' %}
+                                    <p class="mb-1">
+                                        <i class="fas fa-users"></i> 
+                                        <strong>Jogadores:</strong> {{ server.players }} / {{ server.max_players }}
+                                    </p>
+                                {% endif %}
+                                {% if server.status != 'not_installed' %}
+                                    <p class="mb-1 server-info-small">
+                                        <i class="fas fa-code-branch"></i> 
+                                        <strong>Versão:</strong> {{ server.version }}
+                                    </p>
+                                    <p class="mb-1 server-info-small">
+                                        <i class="fas fa-calendar"></i> 
+                                        <strong>Instalado:</strong> {{ server.install_date }}
+                                    </p>
+                                    <p class="mb-1 server-info-small">
+                                        <i class="fas fa-folder"></i> 
+                                        <strong>Caminho:</strong> {{ server.path }}
+                                    </p>
+                                    {% if server.status != 'not_installed' %}
+                                        <p class="mb-1 server-info-small">
+                                            <i class="fas fa-microchip"></i> 
+                                            <strong>CPU:</strong> {{ server.cpu_percent }}%
+                                        </p>
+                                        <p class="mb-0 server-info-small">
+                                            <i class="fas fa-memory"></i> 
+                                            <strong>Memória:</strong> {{ server.memory_mb|round(0) }} MB
+                                        </p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        {% if server.status != 'not_installed' %}
+                            <div class="d-grid gap-2">
+                                <a href="/server/{{ server.id }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-cog"></i> Gerenciar Servidor
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <!-- Informações do Sistema -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Informações do Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-network-wired"></i> <strong>IP do Servidor:</strong> {{ request.host.split(':')[0] }}</p>
+                        <p><i class="fas fa-sync-alt"></i> <strong>Status:</strong> Painel Online</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="fas fa-database"></i> <strong>Servidores Configurados:</strong> {{ servers|length }}</p>
+                        <p><i class="fas fa-map-marked-alt"></i> <strong>Mapas ARK:</strong> Todos Pré-Configurados</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function installServer(serverId) {
+            // Desabilitar botão e mostrar loading
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Instalando...';
+            button.disabled = true;
+            // Adicionar classe de instalação ao card
+            document.getElementById(`server-card-${serverId}`).classList.add('installing');
+            
+            fetch(`/api/server/${serverId}/install`, {
+                method: 'POST',
+                timeout: 30000 // 30 segundos de timeout
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Instalação iniciada com sucesso! O servidor será instalado em segundo plano.');
+                    // Atualizar página após 3 segundos para mostrar o novo status
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    alert('Erro na instalação: ' + data.message);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    document.getElementById(`server-card-${serverId}`).classList.remove('installing');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro na instalação: ' + error.message + '. A instalação pode estar em andamento em segundo plano.');
+                // Mesmo com erro, atualizar a página para verificar o status
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            });
+        }
+        
+        // Auto-refresh a cada 15 segundos para atualizar status
+        setInterval(function(){
+            fetch('/api/servers')
+            .then(response => response.json())
+            .then(data => {
+                // Atualizar apenas se houver mudanças significativas
+                // Por enquanto, recarregamos a página para simplificar
+                location.reload();
+            })
+            .catch(error => {
+                console.log('Erro ao atualizar status:', error);
+            });
+        }, 15000);
+    </script>
+</body>
+</html>

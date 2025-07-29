@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ server.name }} - Configurações - ARK Server Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #1a1a1a; color: #fff; }
+        .navbar { background: linear-gradient(90deg, #8B0000, #B22222); }
+        .card { background-color: #2d2d2d; border: 1px solid #444; }
+        .card-header { background-color: #3a3a3a; border-bottom: 1px solid #444; }
+        .form-control, .form-select { background-color: #333; border: 1px solid #555; color: #fff; }
+        .form-control:focus, .form-select:focus { background-color: #333; border-color: #B22222; color: #fff; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dragon"></i> ARK Server Panel
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">← Dashboard</a>
+                <a class="nav-link" href="/server/{{ server.id }}">← Servidor</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>
+                                <i class="fas fa-cog"></i> Configurações - {{ server.name }}
+                            </h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-server"></i> Configurações Básicas</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">Nome do Servidor</label>
+                                        <input type="text" class="form-control" name="SessionName" value="{{ config.SessionName }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Senha do Servidor (opcional)</label>
+                                        <input type="password" class="form-control" name="ServerPassword" value="{{ config.ServerPassword }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Senha de Administrador</label>
+                                        <input type="password" class="form-control" name="ServerAdminPassword" value="{{ config.ServerAdminPassword }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Máximo de Jogadores</label>
+                                        <input type="number" class="form-control" name="MaxPlayers" value="{{ config.MaxPlayers }}" min="1" max="200">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-sliders-h"></i> Configurações Avançadas</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">Dificuldade (0-5)</label>
+                                        <input type="number" class="form-control" name="DifficultyOffset" value="{{ config.DifficultyOffset }}" step="0.1" min="0" max="5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Velocidade do Ciclo Diurno</label>
+                                        <input type="number" class="form-control" name="DayCycleSpeedScale" value="{{ config.DayCycleSpeedScale }}" step="0.1" min="0.1" max="10">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Velocidade da Noite</label>
+                                        <input type="number" class="form-control" name="NightTimeSpeedScale" value="{{ config.NightTimeSpeedScale }}" step="0.1" min="0.1" max="10">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Multiplicador de Dano (Dinos)</label>
+                                        <input type="number" class="form-control" name="DinoDamageMultiplier" value="{{ config.DinoDamageMultiplier }}" step="0.1" min="0.1" max="10">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Multiplicador de Dano (Jogadores)</label>
+                                        <input type="number" class="form-control" name="PlayerDamageMultiplier" value="{{ config.PlayerDamageMultiplier }}" step="0.1" min="0.1" max="10">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Multiplicador de Dano (Estruturas)</label>
+                                        <input type="number" class="form-control" name="StructureDamageMultiplier" value="{{ config.StructureDamageMultiplier }}" step="0.1" min="0.1" max="10">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-save"></i> Salvar Configurações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const configData = {};
+            
+            for (let [key, value] of formData.entries()) {
+                configData[key] = value;
+            }
+            
+            fetch(`/api/server/{{ server.id }}/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(configData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Configurações salvas com sucesso!');
+                } else {
+                    alert('Erro ao salvar configurações: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro: ' + error);
+            });
+        });
+    </script>
+</body>
+</html>
